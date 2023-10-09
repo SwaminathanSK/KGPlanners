@@ -8,6 +8,63 @@ import numpy as np
 from geometry_msgs.msg import PoseStamped
 import os
 
+def getMarkerIDFromCorners(corner_set):
+    
+    # Define your ArUco dictionary (e.g., DICT_4X4_250)
+    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_250)
+
+    # Initialize the marker ID to an invalid value
+    marker_id = -1
+
+    # Ensure that the corner_set is a list of numpy arrays
+    corner_list = [corner_set]
+
+    # Detect the marker ID using the dictionary and marker size
+    marker_ids = cv2.aruco.detectMarkers(corner_list, aruco_dict)[1]
+    if marker_ids is not None and len(marker_ids) > 0:
+        marker_id = marker_ids[0][0]
+
+    return marker_id
+
+def getMarkerIDFromCorners(corner_set):
+
+    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_250)
+    
+    marker_id = -1
+
+    corner_set_cv = cv2.UMat(corner_set)
+
+    for corner in corner_set_cv:
+      
+        corner_list = [corner.get()]
+
+       
+        marker_ids = cv2.aruco.detectMarkers(corner_list, aruco_dict)[1]
+        if marker_ids is not None and len(marker_ids) > 0:
+            marker_id = marker_ids[0][0]
+            break  
+    return marker_id
+
+def estimatePoseSingleMarkers(corners, marker_size, camera_matrix, dist_coeff):
+
+    if len(corners) != 1:
+        raise ValueError("This function expects exactly one marker corner set.")
+
+
+    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_250)
+
+
+    marker_id = getMarkerIDFromCorners(corners[0][0])
+
+
+    obj_points = np.array([[0, 0, 0], [marker_size, 0, 0], [marker_size, marker_size, 0], [0, marker_size, 0]], dtype=np.float32)
+
+
+    _, rvec, tvec = cv2.solvePnP(obj_points, corners[0], camera_matrix, dist_coeff)
+
+    return rvec.squeeze(), tvec.squeeze(), 1
+
+
 class ArucoPoseEstimator:
     
     def __init__(self):
@@ -32,23 +89,7 @@ class ArucoPoseEstimator:
         self.camera_matrix = np.array(msg.K).reshape((3, 3))
         self.dist_coeff = np.array(msg.D)
 
-    def my_estimatePoseSingleMarkers(self, corners, markerSize, mtx, distortion):
-
-        marker_points = np.array([[-markerSize / 2, markerSize / 2, 0],
-                              [markerSize / 2, markerSize / 2, 0],
-                              [markerSize / 2, -markerSize / 2, 0],
-                              [-markerSize / 2, -markerSize / 2, 0]], dtype=np.float32)
-        trash = []
-        rvecs = []
-        tvecs = []
-        i = 0
-        for c in corners:
-            lilTrash, R, t = cv2.solvePnP(marker_points, corners[i], mtx, distortion, False, cv2.SOLVEPNP_IPPE_SQUARE)
-            rvecs.append(R)
-            tvecs.append(t)
-            trash.append(lilTrash)
-        return np.array(rvecs), np.array(tvecs), trash
-
+       
     def image_callback(self, msg):
         
         if not self.first_frame_saved:
@@ -67,7 +108,7 @@ class ArucoPoseEstimator:
 
                 if ids is not None and len(ids) > 0:
                     
-                    rvec, tvec, _ = self.my_estimatePoseSingleMarkers(corners[0], 0.1, self.camera_matrix, self.dist_coeff)
+                    rvec, tvec, _ = estimatePoseSingleMarkers(corners[0], 0.1, self.camera_matrix, self.dist_coeff)
                     rvec = rvec.squeeze()
                     tvec = tvec.squeeze()
 
