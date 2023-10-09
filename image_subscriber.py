@@ -9,24 +9,6 @@ from geometry_msgs.msg import PoseStamped
 import os
 
 def getMarkerIDFromCorners(corner_set):
-    
-    # Define your ArUco dictionary (e.g., DICT_4X4_250)
-    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_250)
-
-    # Initialize the marker ID to an invalid value
-    marker_id = -1
-
-    # Ensure that the corner_set is a list of numpy arrays
-    corner_list = [corner_set]
-
-    # Detect the marker ID using the dictionary and marker size
-    marker_ids = cv2.aruco.detectMarkers(corner_list, aruco_dict)[1]
-    if marker_ids is not None and len(marker_ids) > 0:
-        marker_id = marker_ids[0][0]
-
-    return marker_id
-
-def getMarkerIDFromCorners(corner_set):
 
     aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_250)
     
